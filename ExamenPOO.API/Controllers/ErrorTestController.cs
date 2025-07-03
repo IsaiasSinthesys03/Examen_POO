@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using ExamenPOO.API.Services;
+using ExamenPOO.Core.Interfaces;
 
 namespace ExamenPOO.API.Controllers;
 

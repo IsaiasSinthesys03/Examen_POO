@@ -93,7 +93,7 @@ builder.Services.AddScoped<DynamicStrictValidator>();
 builder.Services.AddScoped<StrictTypeCompatibilityService>();
 
 // Servicio de logging detallado
-builder.Services.AddScoped<ExamenPOO.API.Services.IDetailedLoggerService, ExamenPOO.API.Services.DetailedLoggerService>();
+builder.Services.AddScoped<ExamenPOO.Core.Interfaces.IDetailedLoggerService, ExamenPOO.Infrastructure.Services.DetailedLoggerService>();
 
 // Entity Framework
 try
@@ -101,8 +101,6 @@ try
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        options.ConfigureWarnings(warnings => 
-            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     });
 }
 catch (Exception ex)
@@ -298,38 +296,34 @@ catch (Exception ex)
     throw new InvalidOperationException("Error crítico en configuración de autenticación JWT", ex);
 }
 
-// CORS - Restricción de IP específica
+// CORS - Configuración optimizada para SOMEE
 try
 {
-    var allowedIPs = builder.Configuration.GetSection("AllowedIPs:IPs").Get<string[]>() ?? new[] { "187.155.101.200" };
-    var corsEnabled = builder.Configuration.GetValue<bool>("AllowedIPs:Enabled", true);
+    var corsEnabled = builder.Configuration.GetValue<bool>("AllowedIPs:Enabled", false);
 
     builder.Services.AddCors(options =>
     {
         if (corsEnabled)
         {
+            // Configuración restrictiva para producción
             options.AddPolicy("AllowSpecificIP", policy =>
             {
-                // Construir orígenes permitidos con HTTP y HTTPS
-                var allowedOrigins = allowedIPs
-                    .SelectMany(ip => new[] { $"http://{ip}", $"https://{ip}" })
-                    .Concat(new[] { 
-                        "http://www.academicuniversity.somee.com", 
-                        "https://www.academicuniversity.somee.com",
-                        "https://academicuniversity.somee.com",
-                        "http://academicuniversity.somee.com"
-                    })
-                    .ToArray();
+                var allowedOrigins = new[] { 
+                    "http://www.academicuniversity.somee.com", 
+                    "https://www.academicuniversity.somee.com",
+                    "https://academicuniversity.somee.com",
+                    "http://academicuniversity.somee.com"
+                };
                 
                 policy.WithOrigins(allowedOrigins)
                       .AllowAnyMethod()
                       .AllowAnyHeader()
-                      .AllowCredentials(); // Permitir credenciales para JWT
+                      .AllowCredentials();
             });
         }
         else
         {
-            // Política de desarrollo - permitir todo
+            // Política permisiva para desarrollo y SOMEE
             options.AddPolicy("AllowSpecificIP", policy =>
             {
                 policy.AllowAnyOrigin()
@@ -461,13 +455,27 @@ catch (Exception ex)
     throw new InvalidOperationException("Error crítico en configuración del pipeline HTTP", ex);
 }
 
-// Auto migrate database and seed data
+// Auto migrate database and seed data - Configuración para SOMEE
 try
 {
     using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        
+        // En producción, verificar si la base de datos existe antes de migrar
+        if (app.Environment.IsProduction())
+        {
+            // Solo crear la base de datos si no existe
+            if (!context.Database.CanConnect())
+            {
+                context.Database.EnsureCreated();
+            }
+        }
+        else
+        {
+            // En desarrollo, usar migraciones normales
+            context.Database.Migrate();
+        }
         
         var seeder = scope.ServiceProvider.GetRequiredService<ExamenPOO.Infrastructure.Services.DatabaseSeederService>();
         await seeder.SeedAsync();
