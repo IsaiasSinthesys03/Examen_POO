@@ -219,6 +219,16 @@ public class StudentService : IStudentService
         var student = await _unitOfWork.Students.GetByIdAsync(id);
         if (student == null) return false;
 
+        // Verificar si el estudiante tiene inscripciones semestrales activas
+        var hasActiveEnrollments = await _unitOfWork.SemesterEnrollments.HasActiveEnrollmentAsync(id);
+        
+        if (hasActiveEnrollments)
+        {
+            throw new InvalidOperationException(
+                "No se puede eliminar el estudiante porque tiene inscripciones semestrales activas. " +
+                "Primero debe completar o cancelar todas sus inscripciones.");
+        }
+
         // Soft delete using domain method
         student.Deactivate();
         
