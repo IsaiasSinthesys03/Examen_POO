@@ -100,3 +100,4 @@ public class AuthController : ControllerBase
         }
     }
 }
+///CAMBIOS MENORES A LOS NOMBRES DE LOS CONTROLLERS

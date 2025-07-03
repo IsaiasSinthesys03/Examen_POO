@@ -246,3 +246,4 @@ public class BasicTypesDto
     [StrictDateTime]
     public DateTime? DateValue { get; set; }
 }
+///CAMBIOS MENORES A LOS NOMBRES DE LOS CONTROLLERS

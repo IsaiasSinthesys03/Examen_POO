@@ -120,3 +120,4 @@ public class ProcessRequest
     public string ProcessName { get; set; } = string.Empty;
     public Dictionary<string, object>? Parameters { get; set; }
 }
+///CAMBIOS MENORES A LOS NOMBRES DE LOS CONTROLLERS
