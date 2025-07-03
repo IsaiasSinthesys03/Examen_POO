@@ -176,7 +176,7 @@ try
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = builder.Environment.IsProduction();
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -313,7 +313,12 @@ try
                 // Construir orígenes permitidos con HTTP y HTTPS
                 var allowedOrigins = allowedIPs
                     .SelectMany(ip => new[] { $"http://{ip}", $"https://{ip}" })
-                    .Concat(new[] { "http://www.academicuniversity.somee.com" })
+                    .Concat(new[] { 
+                        "http://www.academicuniversity.somee.com", 
+                        "https://www.academicuniversity.somee.com",
+                        "https://academicuniversity.somee.com",
+                        "http://academicuniversity.somee.com"
+                    })
                     .ToArray();
                 
                 policy.WithOrigins(allowedOrigins)
@@ -407,24 +412,28 @@ try
     // Middleware global de manejo de errores (debe ir primero)
     app.UseMiddleware<GlobalExceptionMiddleware>();
     
-    app.UseSwagger();
-    app.UseSwaggerUI(c => {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ExamenPOO API v1");
-        c.RoutePrefix = "swagger"; // Mantiene la URL /swagger
-        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        c.DefaultModelsExpandDepth(-1);
-        c.DisplayRequestDuration();
-        c.EnableDeepLinking();
-        c.EnableFilter();
-        c.EnableValidator();
-        c.SupportedSubmitMethods(Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Get, 
-                               Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Post, 
-                               Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Put, 
-                               Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Delete);
-        // Configuración adicional para mejor experiencia
-        c.InjectStylesheet("/swagger-ui/custom.css");
-        c.DocumentTitle = "ExamenPOO API Documentation";
-    });
+    // Solo mostrar Swagger en desarrollo o cuando esté explícitamente habilitado
+    if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableSwagger", false))
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c => {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "ExamenPOO API v1");
+            c.RoutePrefix = "swagger"; // Mantiene la URL /swagger
+            c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+            c.DefaultModelsExpandDepth(-1);
+            c.DisplayRequestDuration();
+            c.EnableDeepLinking();
+            c.EnableFilter();
+            c.EnableValidator();
+            c.SupportedSubmitMethods(Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Get, 
+                                   Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Post, 
+                                   Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Put, 
+                                   Swashbuckle.AspNetCore.SwaggerUI.SubmitMethod.Delete);
+            // Configuración adicional para mejor experiencia
+            c.InjectStylesheet("/swagger-ui/custom.css");
+            c.DocumentTitle = "ExamenPOO API Documentation";
+        });
+    }
 
     app.UseHttpsRedirection();
 
